@@ -7,6 +7,8 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
+import https from "https";
+import fs from "fs";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -424,7 +426,20 @@ app.put(
   }
 );
 
-const PORT = 5173;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const privateKey = fs.readFileSync(
+  path.join(__dirname, "myserver.key"),
+  "utf8"
+);
+const certificate = fs.readFileSync(
+  path.join(__dirname, "myserver.crt"),
+  "utf8"
+);
+
+const options = {
+  key: privateKey,
+  cert: certificate,
+};
+
+https.createServer(options, app).listen(5173, () => {
+  console.log("Server is running on https://localhost:5173");
 });
