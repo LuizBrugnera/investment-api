@@ -376,6 +376,7 @@ app.post("/login", async (req: Request, res: Response) => {
     }
     res.status(401).send("Credentials are not valid");
   } catch (error) {
+    console.error(error);
     res.status(500).send("Server error");
   }
 });
