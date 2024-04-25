@@ -12,7 +12,7 @@ const app = express();
 const prisma = new PrismaClient();
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "src/uploads/");
+    cb(null, "dist/uploads/");
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -59,62 +59,67 @@ app.post(
   validateSessionToken,
   upload.single("documentArchive"),
   async (req: Request, res: Response) => {
-    const { documentString, documentType, investmentType, method, value } =
-      req.body;
+    try {
+      const { documentString, documentType, investmentType, method, value } =
+        req.body;
 
-    const token = String(req.headers["authorization"]).replace("Bearer ", "");
+      const token = String(req.headers["authorization"]).replace("Bearer ", "");
 
-    if (!token) return res.sendStatus(401);
+      if (!token) return res.sendStatus(401);
 
-    jwt.verify(token, process.env.SECRET_KEY!, (err, session) => {
-      if (err) {
-        if (err.name === "TokenExpiredError") {
-          return res.sendStatus(401);
+      jwt.verify(token, process.env.SECRET_KEY!, (err, session) => {
+        if (err) {
+          if (err.name === "TokenExpiredError") {
+            return res.sendStatus(401);
+          }
+          return res.sendStatus(403);
         }
-        return res.sendStatus(403);
+        req.body.session = session;
+      });
+
+      const userId = req.body.session.id;
+
+      const startDate = new Date();
+      let endDate;
+      if (investmentType === "SIX_MONTHS") {
+        endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 6);
+      } else if (investmentType === "ONE_YEAR") {
+        endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      } else {
+        return res.status(400).json({ error: "Invalid investment type" });
       }
-      req.body.session = session;
-    });
+      if (!userId || !documentType || !investmentType || !method || !value) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
 
-    const userId = req.body.session.id;
+      let documentUrl = documentString || "Arquivo";
+      if (req.file) {
+        documentUrl = `${req.protocol}://${req.get("host")}/uploads/${
+          req.file.filename
+        }`;
+      }
 
-    const startDate = new Date();
-    let endDate;
-    if (investmentType === "SIX_MONTHS") {
-      endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 6);
-    } else if (investmentType === "ONE_YEAR") {
-      endDate = new Date();
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    } else {
-      return res.status(400).json({ error: "Invalid investment type" });
+      const newContract = await prisma.contract.create({
+        data: {
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          documentString,
+          documentUrl,
+          documentType,
+          investmentType,
+          method,
+          status: "PENDING",
+          value: +value,
+          userId,
+        },
+      });
+      res.json(newContract);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send("Server error");
     }
-    if (!userId || !documentType || !investmentType || !method || !value) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    let documentUrl = documentString || "Arquivo";
-    if (req.file) {
-      documentUrl = `${req.protocol}://${req.get("host")}/uploads/${
-        req.file.filename
-      }`;
-    }
-
-    const newContract = await prisma.contract.create({
-      data: {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        documentString,
-        documentUrl,
-        documentType,
-        investmentType,
-        method,
-        status: "PENDING",
-        value: +value,
-        userId,
-      },
-    });
-    res.json(newContract);
   }
 );
 
@@ -154,23 +159,11 @@ app.get("/download-archive/:filename", async (req, res) => {
 
   const filePath = path.join(__dirname, "uploads", filename);
 
-  res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.status(404).send("File not found.");
-    }
-  });
-
-  /* 
-
   res.download(filePath, (err) => {
     if (err) {
-      // Lidar com erros, como arquivo não encontrado
       res.status(404).send("File not found.");
     }
   });
-
-*/
 });
 
 app.get(
@@ -424,7 +417,8 @@ app.put(
   }
 );
 
-const PORT = 5173;
+const PORT = 5173; // const PORT = 3000; //
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
