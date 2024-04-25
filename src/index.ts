@@ -100,7 +100,7 @@ app.post(
           req.file.filename
         }`;
       }
-
+      console.log(req.file?.buffer.toString());
       const newContract = await prisma.contract.create({
         data: {
           startDate: new Date(startDate),
@@ -424,7 +424,7 @@ app.put(
   }
 );
 
-const PORT = 5173; // const PORT = 3000; //
+const PORT = 3000; // const PORT = 3000; //
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
