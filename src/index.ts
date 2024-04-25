@@ -155,15 +155,20 @@ app.get(
 */
 
 app.get("/download-archive/:filename", async (req, res) => {
-  const { filename } = req.params;
+  try {
+    const { filename } = req.params;
 
-  const filePath = path.join(__dirname, "uploads", filename);
-
-  res.download(filePath, (err) => {
-    if (err) {
-      res.status(404).send("File not found.");
-    }
-  });
+    const filePath = path.join(__dirname, "uploads", filename);
+    console.log(filePath);
+    res.download(filePath, (err) => {
+      if (err) {
+        res.status(404).send("File not found.");
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
 });
 
 app.get(
