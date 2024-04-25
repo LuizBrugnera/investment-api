@@ -7,6 +7,9 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+
 const dir = path.join(__dirname, "uploads");
 const app = express();
 const prisma = new PrismaClient();
@@ -60,8 +63,14 @@ app.post(
   upload.single("documentArchive"),
   async (req: Request, res: Response) => {
     try {
-      const { documentString, documentType, investmentType, method, value } =
-        req.body;
+      const {
+        documentString,
+        documentType,
+        investmentType,
+        method,
+        value,
+        hash,
+      } = req.body;
 
       const token = String(req.headers["authorization"]).replace("Bearer ", "");
 
@@ -99,6 +108,20 @@ app.post(
         documentUrl = `${req.protocol}://${req.get("host")}/uploads/${
           req.file.filename
         }`;
+
+        const fileBuffer = fs.readFileSync(
+          path.join(__dirname, "uploads", req.file.filename)
+        );
+        const hashSum = crypto.createHash("md5");
+        hashSum.update(fileBuffer);
+        const hex = hashSum.digest("hex");
+        console.log("Client-side MD5 Hash:", hash);
+        console.log("Server-side MD5 Hash:", hex);
+        if (hash === hex) {
+          console.log("File is valid");
+        } else {
+          console.log("File is invalid");
+        }
       }
 
       const newContract = await prisma.contract.create({
