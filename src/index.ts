@@ -7,12 +7,12 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
-
+const dir = path.join(__dirname, "uploads");
 const app = express();
 const prisma = new PrismaClient();
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "dist/uploads/");
+    cb(null, dir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -157,9 +157,7 @@ app.get(
 app.get("/download-archive/:filename", async (req, res) => {
   const { filename } = req.params;
 
-  const filePath = path.join(__dirname, "uploads", filename);
-
-  res.download(filePath, (err) => {
+  res.download(dir, (err) => {
     if (err) {
       res.status(404).send("File not found.");
     }
