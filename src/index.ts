@@ -100,7 +100,7 @@ app.post(
           req.file.filename
         }`;
       }
-      console.log(req.file?.buffer.toString());
+
       const newContract = await prisma.contract.create({
         data: {
           startDate: new Date(startDate),
