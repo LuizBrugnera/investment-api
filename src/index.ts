@@ -159,8 +159,9 @@ app.get("/download-archive/:filename", async (req, res) => {
     const { filename } = req.params;
 
     const filePath = path.join(__dirname, "uploads", filename);
-    console.log(filePath);
-    res.download(filePath, (err) => {
+
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.sendFile(filePath, (err) => {
       if (err) {
         res.status(404).send("File not found.");
       }
